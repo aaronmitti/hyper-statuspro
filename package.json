@@ -1,0 +1,28 @@
+{
+  "name": "hyper-statuspro",
+  "version": "1.0.0",
+  "description": "Status Plugin for Hyper",
+  "main": "index.js",
+  "license": "MIT",
+  "repository": "aaronmitti/hyper-statuspro",
+  "author": {
+    "name": "Aaron Mitti",
+    "email": "github@aaronmitti.com"
+  },
+  "files": [
+    "index.js"
+  ],
+  "keywords": [
+    "hyper",
+    "hyper-theme",
+    "hyperterm",
+    "hyperterm-theme",
+    "hyper-statuspro",
+    "statusline"
+  ],
+  "dependencies": {
+    "after-all-results": "^2.0.0",
+    "color": "^2.0.0",
+    "tildify": "^1.2.0"
+  }
+}
