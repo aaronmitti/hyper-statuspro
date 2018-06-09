@@ -23,6 +23,7 @@
   "dependencies": {
     "after-all-results": "^2.0.0",
     "color": "^2.0.0",
-    "tildify": "^1.2.0"
+    "tildify": "^1.2.0",
+    "react-touchbar-electron": "0.0.1"
   }
 }
