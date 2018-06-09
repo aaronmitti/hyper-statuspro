@@ -3,6 +3,7 @@ const { exec } = require('child_process');
 const color = require('color');
 const afterAll = require('after-all-results');
 const tildify = require('tildify');
+const { TouchBar } = require('electron');
 
 exports.decorateConfig = (config) => {
     const colorForeground = color(config.foregroundColor || '#fff');
@@ -140,6 +141,7 @@ exports.decorateConfig = (config) => {
     });
 };
 
+let currentUid;
 let pid;
 let cwd;
 let git = {
@@ -165,7 +167,7 @@ const setCwd = (pid, action) => {
             setGit(cwd);
         });
     }
-    
+
 };
 
 const isGit = (dir, cb) => {
@@ -337,6 +339,7 @@ exports.middleware = (store) => (next) => (action) => {
         case 'SESSION_ADD':
             pid = action.pid;
             setCwd(pid);
+            window.rpc.emit('uid set', action.uid);
             break;
 
         case 'SESSION_ADD_DATA':
@@ -345,14 +348,69 @@ exports.middleware = (store) => (next) => (action) => {
 
             if (enterKey) {
                 setCwd(pid, action);
+                window.rpc.emit('enter pressed');
             }
             break;
 
         case 'SESSION_SET_ACTIVE':
             pid = uids[action.uid].pid;
             setCwd(pid);
+            window.rpc.emit('uid set', action.uid);
             break;
+
     }
 
     next(action);
+};
+
+exports.onWindow = win => {
+  const {TouchBarButton, TouchBarLabel, TouchBarSpacer} = TouchBar
+
+  let line = 0
+
+  const commandButton = ({ label, bgColor: backgroundColor, command }) =>
+    new TouchBarButton({
+      label,
+      backgroundColor,
+      click: () => {
+        win.sessions.get(currentUid).write(`\r${command}\r`);
+      }
+    });
+
+  const commandLabel = ({ label, textColor: textColor }) =>
+    new TouchBarLabel({
+      label,
+      textColor
+    });
+
+  const generateControls = self => {
+    let controls = [
+      new TouchBarLabel({
+          label: "⎈ mgmt-torq:portal",
+          textColor: '#57c7ff'
+      }),
+      new TouchBarLabel({
+          label: "CWD:" + pid,
+          textColor: '#ffffff'
+      }),
+      new TouchBarLabel({
+          label: "⎇ master",
+          textColor: '#5af78e'
+      }),
+    ]
+
+    return controls;
+  };
+
+  win.setTouchBar(new TouchBar(generateControls()));
+
+  win.rpc.on('uid set', uid => {
+    currentUid = uid;
+  });
+
+  win.rpc.on('enter pressed', () => {
+    setTimeout(() => {
+      win.setTouchBar(new TouchBar(generateControls()));
+    }, 200);
+  });
 };
