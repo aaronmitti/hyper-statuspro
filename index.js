@@ -403,11 +403,13 @@ exports.onWindow = win => {
     // Update Git Status
     if (git.branch) {
       if (git.dirty) {
-        gitTouchBarButton.label = "⎇ ✎ " + git.branch;
+        gitTouchBarButton.label = "⎇ " + git.branch + " ◉";
         gitTouchBarButton.backgroundColor = "#ff5c57";
       } else {
+        // Snazzy green  addc10 189303 0c4801
         gitTouchBarButton.label = "⎇ " + git.branch;
-        gitTouchBarButton.backgroundColor = "#5af78e";
+        //gitTouchBarButton.backgroundColor = "#5af78e";
+        gitTouchBarButton.backgroundColor = "#189303";
       }
       gitTouchBarButton.click = () => {
         win.shell.openExternal(git.remote);
