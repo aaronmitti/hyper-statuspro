@@ -3,6 +3,7 @@ const { exec } = require('child_process');
 const color = require('color');
 const afterAll = require('after-all-results');
 const tildify = require('tildify');
+const pathShorten = require('path-shorten');
 const { TouchBar } = require('electron');
 
 exports.decorateConfig = (config) => {
@@ -168,6 +169,7 @@ const setCwd = (pid, action) => {
         });
     }
 
+    window.rpc.emit('statuspro-update', {cwd: cwd, git: git});
 };
 
 const isGit = (dir, cb) => {
@@ -332,6 +334,7 @@ exports.middleware = (store) => (next) => (action) => {
     const uids = store.getState().sessions.sessions;
 
     switch (action.type) {
+
         case 'SESSION_SET_XTERM_TITLE':
             pid = uids[action.uid].pid;
             break;
@@ -339,7 +342,6 @@ exports.middleware = (store) => (next) => (action) => {
         case 'SESSION_ADD':
             pid = action.pid;
             setCwd(pid);
-            window.rpc.emit('uid set', action.uid);
             break;
 
         case 'SESSION_ADD_DATA':
@@ -348,14 +350,12 @@ exports.middleware = (store) => (next) => (action) => {
 
             if (enterKey) {
                 setCwd(pid, action);
-                window.rpc.emit('enter pressed');
             }
             break;
 
         case 'SESSION_SET_ACTIVE':
             pid = uids[action.uid].pid;
             setCwd(pid);
-            window.rpc.emit('uid set', action.uid);
             break;
 
     }
@@ -377,40 +377,46 @@ exports.onWindow = win => {
       }
     });
 
-  const commandLabel = ({ label, textColor: textColor }) =>
-    new TouchBarLabel({
-      label,
-      textColor
-    });
 
-  const generateControls = self => {
-    let controls = [
-      new TouchBarLabel({
-          label: "⎈ mgmt-torq:portal",
-          textColor: '#57c7ff'
-      }),
-      new TouchBarLabel({
-          label: "CWD:" + pid,
-          textColor: '#ffffff'
-      }),
-      new TouchBarLabel({
-          label: "⎇ master",
-          textColor: '#5af78e'
-      }),
-    ]
-
-    return controls;
-  };
-
-  win.setTouchBar(new TouchBar(generateControls()));
-
-  win.rpc.on('uid set', uid => {
-    currentUid = uid;
+  const k8sTouchBarLabel = new TouchBarLabel({
+    textColor: '#57c7ff'
   });
 
-  win.rpc.on('enter pressed', () => {
-    setTimeout(() => {
-      win.setTouchBar(new TouchBar(generateControls()));
-    }, 200);
+  const cwdTouchBarLabel = new TouchBarLabel({
+    textColor: '#ffffff'
+  });
+
+  const gitTouchBarLabel = new TouchBarLabel({
+  });
+
+  const k8sTouchBar = new TouchBar([
+      k8sTouchBarLabel,
+      cwdTouchBarLabel,
+      gitTouchBarLabel
+  ]);
+
+  const updateTouchBar = ({cwd: cwd, git: git}) => {
+    k8sTouchBarLabel.label = "⎈ mgmt-torq:" + line++;
+    cwdTouchBarLabel.label = pathShorten(String(cwd), {length: 1});
+
+    if (git.branch) {
+      if (git.dirty) {
+        gitTouchBarLabel.label = "⎇ ✎ " + git.branch;
+        gitTouchBarLabel.textColor = "#ff5c57";
+      } else {
+        gitTouchBarLabel.label = "⎇ " + git.branch;
+        gitTouchBarLabel.textColor = "#5af78e";
+      }
+    } else {
+      gitTouchBarLabel.label = "";
+    }
+  };
+
+  win.setTouchBar(k8sTouchBar);
+
+  win.rpc.on('statuspro-update', ({cwd: cwd, git: git}) => {
+    new Promise(() => {
+      updateTouchBar({cwd: cwd, git: git});
+    });
   });
 };
