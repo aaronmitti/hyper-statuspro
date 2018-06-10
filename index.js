@@ -366,8 +366,6 @@ exports.middleware = (store) => (next) => (action) => {
 exports.onWindow = win => {
   const {TouchBarButton, TouchBarLabel, TouchBarSpacer} = TouchBar
 
-  let line = 0
-
   const commandButton = ({ label, bgColor: backgroundColor, command }) =>
     new TouchBarButton({
       label,
@@ -377,39 +375,50 @@ exports.onWindow = win => {
       }
     });
 
-
-  const k8sTouchBarLabel = new TouchBarLabel({
-    textColor: '#57c7ff'
+  const k8sTouchBarButton = new TouchBarButton({
+    label: "",
+    //backgroundColor: '#57c7ff'
+    backgroundColor: '#005faf'
   });
 
   const cwdTouchBarLabel = new TouchBarLabel({
     textColor: '#ffffff'
   });
 
-  const gitTouchBarLabel = new TouchBarLabel({
+  const gitTouchBarButton = new TouchBarButton({
+    label: "",
+    backgroundColor: "#000000"
   });
 
   const k8sTouchBar = new TouchBar([
-      k8sTouchBarLabel,
-      cwdTouchBarLabel,
-      gitTouchBarLabel
+      k8sTouchBarButton,
+      gitTouchBarButton,
+      cwdTouchBarLabel
   ]);
 
   const updateTouchBar = ({cwd: cwd, git: git}) => {
-    k8sTouchBarLabel.label = "⎈ mgmt-torq:" + line++;
-    cwdTouchBarLabel.label = pathShorten(String(cwd), {length: 1});
+    // Update Kubernetes Status
+    k8sTouchBarButton.label = "⎈ mgmt-torq:portal";
 
+    // Update Git Status
     if (git.branch) {
       if (git.dirty) {
-        gitTouchBarLabel.label = "⎇ ✎ " + git.branch;
-        gitTouchBarLabel.textColor = "#ff5c57";
+        gitTouchBarButton.label = "⎇ ✎ " + git.branch;
+        gitTouchBarButton.backgroundColor = "#ff5c57";
       } else {
-        gitTouchBarLabel.label = "⎇ " + git.branch;
-        gitTouchBarLabel.textColor = "#5af78e";
+        gitTouchBarButton.label = "⎇ " + git.branch;
+        gitTouchBarButton.backgroundColor = "#5af78e";
+      }
+      gitTouchBarButton.click = () => {
+        win.shell.openExternal(git.remote);
       }
     } else {
-      gitTouchBarLabel.label = "";
+      gitTouchBarButton.label = "";
+      gitTouchBarButton.backgroundColor = "#000000";
     }
+
+    // Update current working directory
+    cwdTouchBarLabel.label = pathShorten(String(cwd), {length: 1});
   };
 
   win.setTouchBar(k8sTouchBar);
