@@ -145,11 +145,90 @@ exports.decorateConfig = (config) => {
 let currentUid;
 let pid;
 let cwd;
+let k8s = {
+    context: '',
+    namespace: '',
+};
 let git = {
     branch: '',
     remote: '',
     dirty: 0,
     ahead: 0
+};
+
+
+const k8sContext = (cb) => {
+    exec(`kubectl config view -o=jsonpath='{.current-context}'`, {}, (err, stdout) => {
+        if (err) {
+            return cb(err);
+        }
+
+        console.log("CTX: " + stdout.trim())
+        cb(null, stdout.trim());
+    });
+}
+
+const k8sNamespace = (cb) => {
+    exec(`kubectl config view -o=jsonpath="{.contexts[?(@.name==\\"mgmt-torq-ditty\\")].context.namespace}"`, {}, (err, stdout) => {
+        if (err) {
+            return cb(err);
+        }
+
+        console.log("NS: " + stdout.trim())
+        cb(null, stdout.trim());
+    });
+}
+
+const k8sCheck = (cb) => {
+    const next = afterAll((err, results) => {
+        if (err) {
+            return cb(err);
+        }
+
+        const context = results[0];
+        const namespace = results[1];
+
+        cb(null, {
+            context: context,
+            namespace: namespace
+        });
+    });
+
+    k8sContext(next());
+    k8sNamespace(next());
+}
+
+const isK8s = (cb) => {
+    exec(`echo 'true'`, (err) => {
+        cb(!err);
+    });
+}
+
+const setK8s = () => {
+
+    isK8s((exists) => {
+        if (!exists) {
+          k8s = {
+            context: 'none',
+            namespace: 'none'
+          }
+
+          return;
+        }
+
+        k8sCheck((err, result) => {
+          if (err) {
+              throw err;
+          }
+
+          k8s = {
+            context: result.context,
+            namespace: result.namespace
+          }
+
+          window.rpc.emit('statuspro-update', {k8s: k8s, git: git, cwd: cwd});
+        })
+    });
 }
 
 const setCwd = (pid, action) => {
@@ -159,17 +238,21 @@ const setCwd = (pid, action) => {
             let path = directoryRegex.exec(action.data);
             if(path){
                 cwd = path[0];
+                window.rpc.emit('statuspro-update', {k8s: k8s, git: git, cwd: cwd});
+
                 setGit(cwd);
+                setK8s();
             }
         }
     } else {
         exec(`lsof -p ${pid} | awk '$4=="cwd"' | tr -s ' ' | cut -d ' ' -f9-`, (err, stdout) => {
             cwd = stdout.trim();
+            window.rpc.emit('statuspro-update', {k8s: k8s, git: git, cwd: cwd});
+
             setGit(cwd);
+            setK8s();
         });
     }
-
-    window.rpc.emit('statuspro-update', {cwd: cwd, git: git});
 };
 
 const isGit = (dir, cb) => {
@@ -259,6 +342,8 @@ const setGit = (repo) => {
                 dirty: result.dirty,
                 ahead: result.ahead
             }
+
+            window.rpc.emit('statuspro-update', {cwd: cwd, git: git});
         })
     });
 }
@@ -366,19 +451,9 @@ exports.middleware = (store) => (next) => (action) => {
 exports.onWindow = win => {
   const {TouchBarButton, TouchBarLabel, TouchBarSpacer} = TouchBar
 
-  const commandButton = ({ label, bgColor: backgroundColor, command }) =>
-    new TouchBarButton({
-      label,
-      backgroundColor,
-      click: () => {
-        win.sessions.get(currentUid).write(`\r${command}\r`);
-      }
-    });
-
   const k8sTouchBarButton = new TouchBarButton({
     label: "",
-    //backgroundColor: '#57c7ff'
-    backgroundColor: '#005faf'
+    backgroundColor: '#000000'
   });
 
   const cwdTouchBarLabel = new TouchBarLabel({
@@ -396,38 +471,57 @@ exports.onWindow = win => {
       cwdTouchBarLabel
   ]);
 
-  const updateTouchBar = ({cwd: cwd, git: git}) => {
+  const updateTouchBar = ({k8s: k8s, git: git, cwd: cwd}) => {
     // Update Kubernetes Status
-    k8sTouchBarButton.label = "⎈ mgmt-torq:portal";
+    if (k8s.context) {
+      k8sTouchBarButton.backgroundColor = "#005faf";
+      k8sTouchBarButton.label = "⎈ " + k8s.context + ":" + k8s.namespace;
+      k8sTouchBarButton.click = () => {
+        shell.openExternal("http://" + k8s.context + "/kubernetes/");
+      }
+    } else {
+      k8sTouchBarButton.backgroundColor = "#222222";
+      k8sTouchBarButton.label = "⎈ not initialized";
+      k8sTouchBarButton.click = ""
+    }
 
     // Update Git Status
     if (git.branch) {
+      git_label = "⎇ " + git.branch;
+
       if (git.dirty) {
-        gitTouchBarButton.label = "⎇ " + git.branch + " ◉";
-        gitTouchBarButton.backgroundColor = "#ff5c57";
+        git_label = git_label + " ✎";
+        git_color = "#ff5c57";
       } else {
-        // Snazzy green  addc10 189303 0c4801
-        gitTouchBarButton.label = "⎇ " + git.branch;
-        //gitTouchBarButton.backgroundColor = "#5af78e";
-        gitTouchBarButton.backgroundColor = "#189303";
+        git_color = "#189303";
       }
+
+      if (git.ahead) {
+        git_label = git_label + " ⇧" + git.ahead;
+      }
+
       gitTouchBarButton.click = () => {
-        win.shell.openExternal(git.remote);
+        shell.openExternal(git.remote);
       }
     } else {
-      gitTouchBarButton.label = "";
-      gitTouchBarButton.backgroundColor = "#000000";
+    var git_label = "⎇ not initialized";
+    var git_color = "#222222";
     }
+    gitTouchBarButton.label = git_label;
+    gitTouchBarButton.backgroundColor = git_color;
 
     // Update current working directory
     cwdTouchBarLabel.label = pathShorten(String(cwd), {length: 1});
+
+    k8sTouchBar
   };
 
   win.setTouchBar(k8sTouchBar);
 
-  win.rpc.on('statuspro-update', ({cwd: cwd, git: git}) => {
-    new Promise(() => {
-      updateTouchBar({cwd: cwd, git: git});
+  win.rpc.on('statuspro-update', ({k8s: k8s, git: git, cwd: cwd}) => {
+    new Promise((resolve, reject) => {
+      updateTouchBar({k8s: k8s, git: git, cwd: cwd});
+      resolve();
     });
   });
 };
