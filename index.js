@@ -158,23 +158,21 @@ let git = {
 
 
 const k8sContext = (cb) => {
-    exec(`kubectl config view -o=jsonpath='{.current-context}'`, {}, (err, stdout) => {
+    exec(`/usr/local/bin/kubectl config view -o=jsonpath='{.current-context}'`, {}, (err, stdout) => {
         if (err) {
             return cb(err);
         }
 
-        console.log("CTX: " + stdout.trim())
         cb(null, stdout.trim());
     });
 }
 
 const k8sNamespace = (cb) => {
-    exec(`kubectl config view -o=jsonpath="{.contexts[?(@.name==\\"mgmt-torq-ditty\\")].context.namespace}"`, {}, (err, stdout) => {
+    exec(`/usr/local/bin/kubectl config view -o=jsonpath="{.contexts[?(@.name==\\"mgmt-torq-ditty\\")].context.namespace}"`, {}, (err, stdout) => {
         if (err) {
             return cb(err);
         }
 
-        console.log("NS: " + stdout.trim())
         cb(null, stdout.trim());
     });
 }
