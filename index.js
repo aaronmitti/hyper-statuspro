@@ -145,7 +145,8 @@ let pid;
 let cwd;
 let k8s = {
     context: '',
-    namespace: '',
+    host: '',
+    namespace: ''
 };
 let git = {
     branch: '',
@@ -155,8 +156,18 @@ let git = {
 };
 
 
+const k8sHost = (cb) => {
+    exec(`/usr/local/bin/kubectl config view -o=jsonpath="{.clusters[?(@.name=='${k8s.context}')].cluster.server}"`, {}, (err, stdout) => {
+        if (err) {
+            return cb(err);
+        }
+
+        cb(null, stdout.trim());
+    });
+}
+
 const k8sContext = (cb) => {
-    exec(`/usr/local/bin/kubectl config view -o=jsonpath='{.current-context}'`, {}, (err, stdout) => {
+    exec(`/usr/local/bin/kubectl config view -o=jsonpath="{.current-context}"`, {}, (err, stdout) => {
         if (err) {
             return cb(err);
         }
@@ -166,7 +177,7 @@ const k8sContext = (cb) => {
 }
 
 const k8sNamespace = (cb) => {
-    exec(`/usr/local/bin/kubectl config view -o=jsonpath="{.contexts[?(@.name==\\"mgmt-torq-ditty\\")].context.namespace}"`, {}, (err, stdout) => {
+    exec(`/usr/local/bin/kubectl config view -o=jsonpath="{.contexts[?(@.name=='${k8s.context}')].context.namespace}"`, {}, (err, stdout) => {
         if (err) {
             return cb(err);
         }
@@ -182,15 +193,18 @@ const k8sCheck = (cb) => {
         }
 
         const context = results[0];
-        const namespace = results[1];
+        const host = results[1];
+        const namespace = results[2];
 
         cb(null, {
             context: context,
+            host: host,
             namespace: namespace
         });
     });
 
     k8sContext(next());
+    k8sHost(next());
     k8sNamespace(next());
 }
 
@@ -205,8 +219,9 @@ const setK8s = () => {
     isK8s((exists) => {
         if (!exists) {
           k8s = {
-            context: 'none',
-            namespace: 'none'
+            context: '',
+            host: '',
+            namespace: ''
           }
 
           return;
@@ -219,6 +234,7 @@ const setK8s = () => {
 
           k8s = {
             context: result.context,
+            host: result.host,
             namespace: result.namespace
           }
 
@@ -355,12 +371,19 @@ exports.decorateHyper = (Hyper, { React }) => {
                 remote: '',
                 dirty: 0,
                 ahead: 0,
+                host: '',
                 context: '',
-                namespace: ''
+                namespace: '',
+                now: ''
             }
 
+            this.handleK8sClick = this.handleK8sClick.bind(this);
             this.handleCwdClick = this.handleCwdClick.bind(this);
             this.handleBranchClick = this.handleBranchClick.bind(this);
+        }
+
+        handleK8sClick(event) {
+            shell.openExternal(this.state.host);
         }
 
         handleCwdClick(event) {
@@ -379,7 +402,7 @@ exports.decorateHyper = (Hyper, { React }) => {
                 React.createElement(Hyper, Object.assign({}, this.props, {
                     customInnerChildren: existingChildren.concat(React.createElement('footer', { className: 'footer_footer' },
                         React.createElement('div', { className: 'footer_group group_overflow' },
-                            React.createElement('div', { className: 'component_component component_k8s' },
+                            React.createElement('div', { className: 'component_component component_k8s', hidden: !this.state.context },
                                 React.createElement('div', { className: 'component_item item_k8s item_clickable', title: this.state.context, onClick: this.handleK8sClick, hidden: !this.state.context }, "⎈ " + this.state.context + ":" + this.state.namespace)
                             ),
                             React.createElement('div', { className: `component_component component_git ${this.state.dirty ? 'component_git_dirty' : ''}`, hidden: !this.state.branch },
@@ -411,6 +434,7 @@ exports.decorateHyper = (Hyper, { React }) => {
                     remote: git.remote,
                     dirty: git.dirty,
                     ahead: git.ahead,
+                    host: k8s.host,
                     context: k8s.context,
                     namespace: k8s.namespace,
                     now: new Date()
