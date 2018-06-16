@@ -23,9 +23,10 @@
   "dependencies": {
     "after-all-results": "^2.0.0",
     "color": "^2.0.0",
-    "tildify": "^1.2.0",
-    "react-touchbar-electron": "0.0.1",
+    "path-shorten": "^0.0.6",
     "react-dom": "^16.0.0",
-    "path-shorten": "^0.0.6"
+    "react-touchbar-electron": "0.0.1",
+    "tildify": "^1.2.0",
+    "react-live-clock": "^2.0.3"
   }
 }

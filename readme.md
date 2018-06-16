@@ -1,6 +1,6 @@
 # hyper-statuspro
 
-> Status  Plugin for [Hyper](https://hyper.is). Shows clickable & useful information. Matches any theme.
+> Status Plugin for [Hyper](https://hyper.is). Shows clickable & useful information. Matches any theme.
 
 ## Install
 
