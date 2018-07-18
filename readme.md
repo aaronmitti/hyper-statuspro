@@ -1,6 +1,8 @@
 # hyper-statuspro
 
-> Status Plugin for [Hyper](https://hyper.is). 
+> Status Plugin for [Hyper](https://hyper.is) with support the TouchBar on the MacBook Pro w/ git and Kubernetes support.
+
+WARNING: early version, might be buggy - feel free to pull request
 
 ## Install
 
