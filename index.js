@@ -156,8 +156,8 @@ let git = {
 };
 
 
-const k8sHost = (cb) => {
-    exec(`/usr/local/bin/kubectl config view -o=jsonpath="{.clusters[?(@.name=='${k8s.context}')].cluster.server}"`, {}, (err, stdout) => {
+const k8sContext = (cb) => {
+    exec(`/usr/local/bin/kubectl config view -o=jsonpath="{.current-context}"`, {}, (err, stdout) => {
         if (err) {
             return cb(err);
         }
@@ -166,8 +166,8 @@ const k8sHost = (cb) => {
     });
 }
 
-const k8sContext = (cb) => {
-    exec(`/usr/local/bin/kubectl config view -o=jsonpath="{.current-context}"`, {}, (err, stdout) => {
+const k8sHost = (cb) => {
+    exec(`/usr/local/bin/kubectl config view -o=jsonpath="{.clusters[?(@.name=='${k8s.context}')].cluster.server}"`, {}, (err, stdout) => {
         if (err) {
             return cb(err);
         }
@@ -182,7 +182,7 @@ const k8sNamespace = (cb) => {
             return cb(err);
         }
 
-        cb(null, stdout.trim());
+        cb(null, stdout.trim() || "default");
     });
 }
 
@@ -510,6 +510,7 @@ exports.onWindow = win => {
       k8sTouchBarButton.backgroundColor = "#005faf";
       k8sTouchBarButton.label = "⎈ " + k8s.context + ":" + k8s.namespace;
       k8sTouchBarButton.click = () => {
+        console.log("http://" + k8s.context + "/kubernetes/")
         shell.openExternal("http://" + k8s.context + "/kubernetes/");
       }
     } else {
@@ -545,8 +546,6 @@ exports.onWindow = win => {
 
     // Update current working directory
     cwdTouchBarLabel.label = pathShorten(String(cwd), {length: 1});
-
-    k8sTouchBar
   };
 
   win.setTouchBar(k8sTouchBar);
