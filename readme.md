@@ -1,6 +1,6 @@
 # hyper-statuspro
 
-> Status Plugin for [Hyper](https://hyper.is). Shows clickable & useful information. Matches any theme.
+> Status Plugin for [Hyper](https://hyper.is). 
 
 ## Install
 
@@ -15,61 +15,11 @@ module.exports = {
 ```
 
 
-## Config
-
-Add following to `~/.hyper.js`
-
-### Change Git Dirty Color
-Expected value is `CSS color`
-
-```javascript
-module.exports = {
-  config: {
-    ...
-      hyperStatusLine: {
-        dirtyColor: 'salmon',
-      }
-    ...
-  }
-}
-```
-
-### Change Git Ahead Color
-Expected value is `CSS color`
-
-```javascript
-module.exports = {
-  config: {
-    ...
-      hyperStatusLine: {
-        aheadColor: 'ivory',
-      }
-    ...
-  }
-}
-```
-
-### Disable Footer Transparency
-Default value is set to `true`
-
-```javascript
-module.exports = {
-  config: {
-    ...
-      hyperStatusLine: {
-        footerTransparent: false,
-      }
-    ...
-  }
-}
-```
-
-
 ## Theme
 
-* [hyper-chesterish](https://github.com/henrikdahl/hyper-chesterish)
+* [mitti-theme](https://github.com/aaronmitti/mitti-theme)
 
 
 ## License
 
-MIT © Henrik
+MIT © Mitti
