@@ -83,7 +83,7 @@ exports.decorateConfig = (config) => {
                 border-radius: 5px;
                 margin-top: 5px;
                 margin-bottom: 5px;
-                margin-left: 5px;
+                margin-left: 0px;
                 margin-right: 0px;
                 padding-left: 5px;
                 padding-right: 5px;
@@ -100,13 +100,13 @@ exports.decorateConfig = (config) => {
                 margin-left: 0;
             }
             .footer_footer .component_k8s {
-              background-color: #005faf;
+              color: #84b6e0 !important;
             }
             .footer_footer .component_git {
-                background-color: #189303;
+              color: #78db6e !important;
             }
             .footer_footer .component_git_dirty {
-                background-color: #ff5c57;
+              color: #ff7570 !important;
             }
             .footer_footer .component_cwd {
             }
@@ -130,6 +130,12 @@ exports.decorateConfig = (config) => {
                 font-weight: 500; */
                 font-size: 12px;
                 font-weight: bold;
+            }
+            .footer_footer .item_branch {
+              padding-right: 0px;
+            }
+            .footer_footer .item_dirty {
+              padding-left: 0px;
             }
             .footer_footer .item_cwd {
             }
@@ -250,19 +256,21 @@ const setCwd = (pid, action) => {
             let path = directoryRegex.exec(action.data);
             if(path){
                 cwd = path[0];
-                window.rpc.emit('statuspro-update', {k8s: k8s, git: git, cwd: cwd});
 
                 setGit(cwd);
                 setK8s();
+                
+                window.rpc.emit('statuspro-update', {k8s: k8s, git: git, cwd: cwd});
             }
         }
     } else {
         exec(`lsof -p ${pid} | awk '$4=="cwd"' | tr -s ' ' | cut -d ' ' -f9-`, (err, stdout) => {
             cwd = stdout.trim();
-            window.rpc.emit('statuspro-update', {k8s: k8s, git: git, cwd: cwd});
 
             setGit(cwd);
             setK8s();
+
+            window.rpc.emit('statuspro-update', {k8s: k8s, git: git, cwd: cwd});
         });
     }
 };
@@ -302,6 +310,8 @@ const gitDirty = (repo, cb) => {
 const gitAhead = (repo, cb) => {
     exec(`git rev-list --left-only --count HEAD...@'{u}' 2>/dev/null`, { cwd: repo }, (err, stdout) => {
         cb(null, parseInt(stdout, 10));
+        
+        window.rpc.emit('statuspro-update', {k8s: k8s, git: git, cwd: cwd});
     });
 }
 
@@ -402,24 +412,26 @@ exports.decorateHyper = (Hyper, { React }) => {
                 React.createElement(Hyper, Object.assign({}, this.props, {
                     customInnerChildren: existingChildren.concat(React.createElement('footer', { className: 'footer_footer' },
                         React.createElement('div', { className: 'footer_group group_overflow' },
-                            React.createElement('div', { className: 'component_component component_k8s', hidden: !this.state.context },
-                                React.createElement('div', { className: 'component_item item_k8s item_clickable', title: this.state.context, onClick: this.handleK8sClick, hidden: !this.state.context }, "⎈ " + this.state.context + ":" + this.state.namespace)
-                            ),
-                            React.createElement('div', { className: `component_component component_git ${this.state.dirty ? 'component_git_dirty' : ''}`, hidden: !this.state.branch },
-                                React.createElement('div', { className: `component_item item_branch ${this.state.remote ? 'item_clickable' : ''}`, title: this.state.remote, onClick: this.handleBranchClick }, "⎇ " + this.state.branch),
-                                React.createElement('div', { className: 'component_item item_number item_dirty', title: `${this.state.dirty} dirty ${this.state.dirty > 1 ? 'files' : 'file'}`, hidden: !this.state.dirty }, " ✎"),
-                                React.createElement('div', { className: 'component_item item_number item_ahead', title: `${this.state.ahead} ${this.state.ahead > 1 ? 'commits' : 'commit'} ahead`, hidden: !this.state.ahead }, " ⇧")
-                            ),
+                        
                             React.createElement('div', { className: 'component_component component_cwd' },
-                                React.createElement('div', { className: 'component_item item_cwd item_clickable', title: this.state.cwd, onClick: this.handleCwdClick, hidden: !this.state.cwd }, this.state.cwd ? tildify(String(this.state.cwd)) : '')
-                            )
+                              React.createElement('div', { className: 'component_item item_cwd', title: this.state.cwd, hidden: !this.state.cwd }, this.state.cwd ? tildify(String(this.state.cwd)) : '')
+                            ),
+                            
+                            
+                            
                         ),
                         React.createElement('div', { className: 'footer_group' },
-                            React.createElement('div', { className: 'component_component component_datetime' },
-                                React.createElement('div', { className: 'component_item item_datetime' },
-                                  this.now
-                                )
-                            )
+                            
+                          React.createElement('div', { className: `component_component component_git ${this.state.dirty ? 'component_git_dirty' : ''}`, hidden: !this.state.branch },
+                            React.createElement('div', { className: `component_item item_branch`, title: this.state.remote}, "⎇ " + this.state.branch),
+                            React.createElement('div', { className: 'component_item item_number item_dirty', title: `${this.state.dirty} dirty ${this.state.dirty > 1 ? 'files' : 'file'}`, hidden: !this.state.dirty }, "•"),
+                            React.createElement('div', { className: 'component_item item_number item_ahead', title: `${this.state.ahead} ${this.state.ahead > 1 ? 'commits' : 'commit'} ahead`, hidden: !this.state.ahead }, " ⇧")
+                          ),
+                          
+                          
+                          React.createElement('div', { className: 'component_component component_k8s', hidden: !this.state.context },
+                          React.createElement('div', { className: 'component_item item_k8s', title: this.state.context, hidden: !this.state.context }, "⎈ " + this.state.context + ":" + this.state.namespace)
+                          ),
                         )
                     ))
                 }))
@@ -439,6 +451,8 @@ exports.decorateHyper = (Hyper, { React }) => {
                     namespace: k8s.namespace,
                     now: new Date()
                 });
+                
+                window.rpc.emit('statuspro-update', {k8s: k8s, git: git, cwd: cwd});
             }, 100);
         }
 
@@ -484,68 +498,66 @@ exports.middleware = (store) => (next) => (action) => {
 exports.onWindow = win => {
   const {TouchBarButton, TouchBarLabel, TouchBarSpacer} = TouchBar
 
-  const k8sTouchBarButton = new TouchBarButton({
-    label: "",
-    backgroundColor: '#000000'
-  });
-
   const cwdTouchBarLabel = new TouchBarLabel({
     textColor: '#ffffff'
   });
 
-  const gitTouchBarButton = new TouchBarButton({
-    label: "",
-    backgroundColor: "#000000"
+  const gitTouchBarLabel = new TouchBarLabel({
+    textColor: '#ffffff'
+  });
+
+  const k8sTouchBarLabel = new TouchBarLabel({
+    textColor: '#ffffff'
   });
 
   const k8sTouchBar = new TouchBar([
-      k8sTouchBarButton,
-      gitTouchBarButton,
-      cwdTouchBarLabel
+      cwdTouchBarLabel,
+      new TouchBarSpacer({ size: 'flexible' }),
+      gitTouchBarLabel,
+      k8sTouchBarLabel,
   ]);
 
   const updateTouchBar = ({k8s: k8s, git: git, cwd: cwd}) => {
     // Update Kubernetes Status
     if (k8s.context) {
-      k8sTouchBarButton.backgroundColor = "#005faf";
-      k8sTouchBarButton.label = "⎈ " + k8s.context + ":" + k8s.namespace;
-      k8sTouchBarButton.click = () => {
-        console.log("http://" + k8s.context + "/kubernetes/")
-        shell.openExternal("http://" + k8s.context + "/kubernetes/");
-      }
+      k8sTouchBarLabel.textColor = "#84b6e0";
+      k8sTouchBarLabel.label = "⎈ " + k8s.context + ":" + k8s.namespace;
     } else {
-      k8sTouchBarButton.backgroundColor = "#222222";
-      k8sTouchBarButton.label = "⎈ not initialized";
-      k8sTouchBarButton.click = ""
+      k8sTouchBarLabel.textColor = "#000000";
+      k8sTouchBarLabel.label = "";
     }
 
     // Update Git Status
     if (git.branch) {
       git_label = "⎇ " + git.branch;
+      git_color = "#d0d0d0";
 
       if (git.dirty) {
-        git_label = git_label + " ✎";
-        git_color = "#ff5c57";
+        git_label = "⎇ " + git.branch + "•";
+        git_color = "#ff7570";
       } else {
-        git_color = "#189303";
+        git_label = "⎇ " + git.branch; // + "☑";
+        git_color = "#78db6e";
       }
 
       if (git.ahead) {
-        git_label = git_label + " ⇧" + git.ahead;
+        git_label = "⎇ " + git.branch + "⇧" + git.ahead;
       }
 
-      gitTouchBarButton.click = () => {
-        shell.openExternal(git.remote);
-      }
     } else {
-    var git_label = "⎇ not initialized";
-    var git_color = "#222222";
+      git_label = "";
+      git_color = "#d0d0d0";
     }
-    gitTouchBarButton.label = git_label;
-    gitTouchBarButton.backgroundColor = git_color;
+    gitTouchBarLabel.label = git_label;
+    gitTouchBarLabel.textColor = git_color;
 
     // Update current working directory
-    cwdTouchBarLabel.label = pathShorten(String(cwd), {length: 1});
+    if (String(cwd).length > 60) {
+      cwdTouchBarLabel.label = pathShorten(String(cwd), {length: 1});
+    } else {
+      cwdTouchBarLabel.label = pathShorten(String(cwd), {length: 128});
+    }
+
   };
 
   win.setTouchBar(k8sTouchBar);
